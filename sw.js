@@ -1,7 +1,7 @@
 // Aplikasi tetap bisa dibuka tanpa internet. File sendiri: coba jaringan dulu supaya selalu versi terbaru.
 // Font dari Google: pakai simpanan dulu.
-const CACHE = 'jatah-harian-v1';
-const FILES = ['jatah-harian.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'jatah-harian-v2';
+const FILES = ['./', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', ev => {
   ev.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -22,7 +22,7 @@ async function networkFirst(req) {
     if (res.ok) await cache.put(req, res.clone());
     return res;
   } catch (e) {
-    return (await cache.match(req, { ignoreSearch: true })) || (await cache.match('jatah-harian.html'));
+    return (await cache.match(req, { ignoreSearch: true })) || (await cache.match('./'));
   }
 }
 

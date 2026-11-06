@@ -1,12 +1,814 @@
 <!doctype html>
 <html lang="id">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="0; url=jatah-harian.html">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Jatah Harian</title>
-</head>
-<body>
-<p><a href="jatah-harian.html">Buka Jatah Harian</a></p>
-</body>
-</html>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#1f7a52">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jatah Harian">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: satu kolom sempit seperti dompet — angka jatah besar di atas, kolom ketik, lalu riwayat */
+:root{
+  --bg:#eef2ee; --surface:#ffffff; --ink:#14251d; --muted:#5b6d64; --line:#d3ddd6;
+  --accent:#1f7a52; --accent-soft:#d6ecdf; --warn:#b7791f; --bad:#c2412d;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1714; --surface:#17221d; --ink:#e4efe8; --muted:#93a69c; --line:#2a3a32;
+  --accent:#4fc28b; --accent-soft:#1d3a2c; --warn:#e3a94a; --bad:#ef7a64; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1714; --surface:#17221d; --ink:#e4efe8; --muted:#93a69c; --line:#2a3a32;
+  --accent:#4fc28b; --accent-soft:#1d3a2c; --warn:#e3a94a; --bad:#ef7a64; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:800;font-size:1.5rem;margin:0;letter-spacing:-.01em}
+.date{color:var(--muted);font-size:.85rem}
+.note{background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:.88rem;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.label{text-transform:uppercase;letter-spacing:.08em;font-size:.72rem;color:var(--muted);font-weight:600}
+.big{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,11vw,3.4rem);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big.warn{color:var(--warn)} .big.bad{color:var(--bad)}
+.sub{color:var(--muted);font-size:.92rem;text-wrap:balance}
+.bar{height:10px;background:var(--bg);border-radius:99px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.bar.warn>span{background:var(--warn)} .bar.bad>span{background:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px dashed var(--line);padding-top:14px}
+.stats div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stats b{font-family:var(--mono);font-size:.9rem;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+form.add{display:flex;gap:8px}
+input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+form.add input{flex:1}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:var(--accent);color:var(--surface)}
+button.ghost{background:transparent;color:var(--accent);padding:6px 8px}
+.hint{color:var(--muted);font-size:.82rem;margin-top:-10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:500;padding:6px 12px;border-radius:99px;font-size:.85rem}
+.err{color:var(--bad);font-size:.85rem;min-height:1.2em;margin-top:-10px}
+section h2{font-family:var(--display);font-weight:500;font-size:1.05rem;margin:0 0 8px}
+ul{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+li{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+li:last-child{border-bottom:0}
+li .what{flex:1;min-width:0;overflow-wrap:anywhere}
+li .when{color:var(--muted);font-size:.78rem}
+li .amt{font-family:var(--mono);font-variant-numeric:tabular-nums}
+li .x{background:none;color:var(--muted);padding:4px 6px;font-size:1rem}
+.empty{color:var(--muted);padding:14px;text-align:center}
+details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+summary{cursor:pointer;font-weight:600}
+.set{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.set label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted);min-width:0}
+.set button,.set .err{grid-column:1/-1}
+.set .err{margin-top:0;min-height:0}
+.ask{align-items:center}
+.ask-q{font-size:.85rem;color:var(--muted);width:100%}
+li .amt.in{color:var(--accent)}
+.edit{flex:1;min-width:0;display:grid;gap:8px}
+.edit input{width:100%}
+.edit .err{margin:0;min-height:0}
+.edit-btns{display:flex;gap:8px;align-items:center}
+.newp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.newp strong,.newp .sub,.newp .err,.newp .edit-btns{grid-column:1/-1}
+.newp strong{font-family:var(--display);font-size:1.05rem}
+.newp label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted);min-width:0}
+.newp .err{margin:0;min-height:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+#backup .sub{margin:10px 0 0}
+#backup .err{margin:8px 0 0;min-height:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom,0px));width:min(428px,calc(100% - 32px));
+  background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 14px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.toast button{color:var(--bg);text-decoration:underline;flex:none}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.check{flex-direction:row!important;align-items:center;gap:8px!important;font-size:.85rem;color:var(--ink)!important;grid-column:1/-1}
+.check input{flex:none;width:18px;height:18px;padding:0;accent-color:var(--accent)}
+.checks{grid-column:1/-1;display:grid;gap:6px}
+.checks:empty{display:none}
+.cap{color:var(--muted);font-size:.82rem;margin:0}
+#bills .cap{margin:10px 0}
+#bills .cap:empty{display:none}
+#bills .err{margin:6px 0 0;min-height:0}
+#bills ul{margin-top:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
+.chart text{fill:var(--muted);font-family:var(--body);font-size:11px}
+.chart .b{fill:var(--accent)}
+.chart .band{fill:var(--accent-soft)}
+.chart .base{stroke:var(--line);stroke-width:1}
+.chart .limit{stroke:var(--ink);stroke-width:2;stroke-dasharray:6 4}
+.chart .hit{fill:transparent;cursor:pointer}
+.tip{font-size:.85rem;min-height:1.3em;font-variant-numeric:tabular-nums}
+details.plain{background:none;border:0;padding:0;font-size:.85rem}
+details.plain summary{font-weight:500;color:var(--muted)}
+details.plain table{width:100%;border-collapse:collapse;margin-top:6px}
+details.plain th,details.plain td{text-align:left;padding:4px 0;border-bottom:1px solid var(--line);font-weight:500}
+details.plain th:last-child,details.plain td:last-child{text-align:right;font-family:var(--mono)}
+.cat-list{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:12px}
+.cat-row{display:grid;grid-template-columns:1fr auto 3em;gap:4px 10px;align-items:baseline}
+.cat-row b{font-family:var(--mono);font-size:.88rem;font-weight:500;font-variant-numeric:tabular-nums}
+.cat-row .cap{text-align:right}
+.cbar{grid-column:1/-1;height:6px;background:var(--bg);border-radius:99px;overflow:hidden}
+.cbar span{display:block;height:100%;background:var(--accent);border-radius:99px}
+li.per{display:block;padding:0}
+.per>details{background:none;border:0;border-radius:0;padding:0}
+.per>details>summary{display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:400;list-style:none}
+.per>details>summary::-webkit-details-marker{display:none}
+.chev{color:var(--muted);flex:none;transition:transform .15s}
+.per>details[open]>summary .chev{transform:rotate(90deg)}
+.per-body{display:grid;gap:10px;padding:2px 14px 14px;min-width:0}
+@media (max-width:380px){.stats{grid-template-columns:1fr 1fr}.set,.newp{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.bar>span,.chev{transition:none}}
+</style>
+
+<div class="wrap">
+  <header><h1>Jatah Harian</h1><span class="date" id="today"></span></header>
+
+  <div class="note" id="demo" hidden>
+    <span>Ini data contoh. Atur uang dan tanggal gajianmu di bawah.</span>
+    <button class="ghost" id="reset" type="button">Mulai dari nol</button>
+  </div>
+
+  <form class="note newp" id="newForm" hidden>
+    <strong id="newTitle">Gajian sudah tiba</strong>
+    <label>Sisa uang yang kamu pegang<input id="newLeft" inputmode="text" autocomplete="off"></label>
+    <label>Gaji yang masuk<input id="newPay" inputmode="text" placeholder="5.000.000" autocomplete="off"></label>
+    <div class="checks" id="newBills"></div>
+    <div class="sub" id="newPreview"></div>
+    <div class="err" id="newErr" role="status"></div>
+    <div class="edit-btns">
+      <button type="submit">Mulai periode baru</button>
+      <button class="ghost" id="newCancel" type="button">Nanti saja</button>
+    </div>
+  </form>
+
+  <details id="settings">
+    <summary>Atur uang & gajian</summary>
+    <form class="set" id="setForm">
+      <label>Uang yang kamu pegang sekarang<input id="money" inputmode="numeric" placeholder="1.500.000"></label>
+      <label>Gajian tiap tanggal<input id="payday" type="number" min="1" max="31" placeholder="25"></label>
+      <label class="check" id="applyWrap" hidden><input type="checkbox" id="applyBills"><span id="applyText"></span></label>
+      <div class="err" id="setErr" role="status"></div>
+      <button type="submit">Simpan</button>
+      <button class="ghost" id="earlyNew" type="button">Sudah gajian? Mulai periode baru</button>
+    </form>
+  </details>
+
+  <details id="bills">
+    <summary>Tagihan & tabungan</summary>
+    <p class="cap">Disisihkan dari uang gajian sebelum jatah dihitung.</p>
+    <form class="add" id="billForm">
+      <input id="billEntry" placeholder="kos 800rb" autocomplete="off" aria-label="Tambah tagihan atau tabungan">
+      <button type="submit">Tambah</button>
+    </form>
+    <div class="err" id="billErr" role="status"></div>
+    <ul id="billList" hidden></ul>
+    <p class="cap" id="billInfo"></p>
+  </details>
+
+  <div class="hero">
+    <span class="label">Sisa jatah hari ini</span>
+    <div class="big" id="left">Rp 0</div>
+    <div class="bar" id="bar"><span id="fill"></span></div>
+    <div class="sub" id="verdict"></div>
+    <div class="stats">
+      <div><span class="label">Jatah/hari</span><b id="perday"></b></div>
+      <div><span class="label">Saldo</span><b id="balance"></b></div>
+      <div><span class="label">Gajian</span><b id="days"></b></div>
+    </div>
+  </div>
+
+  <form class="add" id="addForm">
+    <input id="entry" placeholder="kopi susu 25rb" autocomplete="off" aria-label="Catat pengeluaran">
+    <button type="submit">Catat</button>
+  </form>
+  <div class="hint">Ketik santai: "nasi padang goceng", "kemarin bensin 50k", "+200rb bonus", "hp 1,5jt cicil 10".</div>
+  <div class="err" id="err" role="status"></div>
+  <div class="chips ask" id="ask" hidden></div>
+  <div class="chips" id="chips"></div>
+
+  <section>
+    <h2>Hari ini</h2>
+    <ul id="todayList"></ul>
+  </section>
+  <section>
+    <h2>Sebelumnya</h2>
+    <ul id="pastList"></ul>
+  </section>
+  <section>
+    <h2>Periode ini</h2>
+    <div class="card" id="insightNow"></div>
+  </section>
+  <section id="periodSec" hidden>
+    <h2>Periode lalu</h2>
+    <ul id="periodList"></ul>
+  </section>
+
+  <details id="backup">
+    <summary>Backup data</summary>
+    <p class="sub" id="backupInfo"></p>
+    <div class="tools">
+      <button id="exportBtn" type="button">Unduh backup</button>
+      <button class="ghost" id="importBtn" type="button">Pulihkan dari file</button>
+      <input id="importFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="err" id="backupErr" role="status"></div>
+  </details>
+</div>
+
+<div class="toast" id="toast" role="status" hidden>
+  <span id="toastMsg"></span>
+  <button class="ghost" id="toastUndo" type="button">Batalkan</button>
+</div>
+
+<script>
+const KEY='jatah-harian-v1';
+const DAY=86400000;
+const rp=n=>(n<0?'−':'')+'Rp '+Math.round(Math.abs(n)).toLocaleString('id-ID');
+const ymd=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const startOf=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+
+function example(){
+  const now=Date.now(),t=startOf(now).getTime();
+  return {demo:true,money:1200000,since:ymd(t-2*DAY),until:ymd(nextPayday(t,25)),payday:25,periods:[],bills:[],entries:[
+    {id:1,what:'nasi padang',amt:28000,at:t-2*DAY+12.5*3600e3},
+    {id:2,what:'bensin',amt:50000,at:t-2*DAY+17*3600e3},
+    {id:3,what:'gorengan',amt:10000,at:t-DAY+16*3600e3},
+    {id:4,what:'pulsa',amt:25000,at:t-DAY+20*3600e3},
+    {id:5,what:'kopi susu',amt:22000,at:t+9*3600e3},
+  ]};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!Array.isArray(S.entries))S=example();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+// Data lama belum punya akhir periode dan arsip: lengkapi saat dibuka atau dipulihkan.
+function normalize(o){
+  if(!Array.isArray(o.periods))o.periods=[];
+  if(!Array.isArray(o.bills))o.bills=[];
+  if(!o.until)o.until=ymd(nextPayday(startOf(o.since),o.payday||25));
+  return o;
+}
+if(!S.until||!Array.isArray(S.periods)||!Array.isArray(S.bills)){normalize(S);save()}
+
+function isValidBackup(o){
+  return !!o&&Array.isArray(o.entries)&&Number.isFinite(o.money)&&Number.isInteger(o.payday)
+    &&typeof o.since==='string'&&!isNaN(new Date(o.since))
+    &&o.entries.every(e=>e&&Number.isFinite(e.id)&&Number.isFinite(e.amt)&&Number.isFinite(e.at)&&typeof e.what==='string'&&(e.days===undefined||Number.isInteger(e.days)))
+    &&(o.bills===undefined||(Array.isArray(o.bills)&&o.bills.every(b=>b&&Number.isFinite(b.id)&&Number.isFinite(b.amt)&&typeof b.what==='string')))
+    &&(o.periods===undefined||(Array.isArray(o.periods)&&o.periods.every(p=>p&&typeof p.since==='string'&&typeof p.end==='string'&&Number.isFinite(p.money))));
+}
+
+// Kata tanggal diambil dari teks lebih dulu, supaya "2 hari lalu bakso 15rb" tidak salah baca nominal.
+function parseWhen(text,now=Date.now()){
+  const base=startOf(now),y=base.getFullYear(),mon=base.getMonth();
+  const ago=n=>new Date(y,mon,base.getDate()-n,12).getTime();
+  const onDate=(d,m,yr)=>{const x=new Date(yr,m,d,12);return x.getMonth()===((m%12)+12)%12&&x.getDate()===d?x.getTime():null};
+  const dayMonth=(d,m)=>{
+    if(m!==null&&(m<1||m>12))return null;
+    const v=onDate(d,m===null?mon:m-1,y);
+    if(v===null||v<base.getTime()+DAY)return v;
+    return m===null?onDate(d,mon-1,y):onDate(d,m-1,y-1);
+  };
+  const names=['minggu','senin','selasa','rabu','kamis','jumat','sabtu'];
+  const weekday=m=>ago((base.getDay()-names.indexOf(m[1].toLowerCase().replace("'",''))+7)%7);
+  const dayRe="(senin|selasa|rabu|kamis|jum'?at|sabtu|minggu)(?!\\s+(?:lalu|ini|depan))\\b";
+  const rules=[
+    [/\b(?:kemarin|kemaren|kmrn|kmarin)\b/i,()=>ago(1)],
+    [/\b(\d{1,2})\s*hari\s*(?:yang\s*|yg\s*)?lalu\b/i,m=>ago(+m[1])],
+    [/\b(?:tgl|tanggal)\.?\s*(\d{1,2})(?:[/-](\d{1,2}))?\b/i,m=>dayMonth(+m[1],m[2]?+m[2]:null)],
+    [/(?:^|\s)(\d{1,2})[/-](\d{1,2})(?=\s|$)/,m=>dayMonth(+m[1],+m[2])],
+    [new RegExp('\\bhari\\s+'+dayRe,'i'),weekday],
+    [new RegExp('^'+dayRe,'i'),weekday],
+  ];
+  let t=text.trim();
+  for(const [re,fn] of rules){
+    const m=t.match(re);if(!m)continue;
+    const at=fn(m);if(at===null)continue;
+    t=(t.slice(0,m.index)+' '+t.slice(m.index+m[0].length)).replace(/\s+/g,' ').trim();
+    return {text:t,at:at>=base.getTime()?now:at};
+  }
+  return {text:t,at:now};
+}
+
+// Titik/koma ribuan ("25.000") dibedakan dari desimal ("1.5jt", "1,5jt").
+function toNumber(s,unit){
+  s=s.replace(/[.,]+$/,'');
+  if(unit!=='jt'&&unit!=='juta'&&/^\d{1,3}([.,]\d{3})+$/.test(s))return parseFloat(s.replace(/[.,]/g,''));
+  const last=Math.max(s.lastIndexOf('.'),s.lastIndexOf(','));
+  if(last<0)return parseFloat(s);
+  return parseFloat(s.slice(0,last).replace(/[.,]/g,'')+'.'+s.slice(last+1));
+}
+
+const SLANG={cepek:100,cepe:100,gopek:500,seceng:1e3,ceng:1e3,seribu:1e3,serebu:1e3,noceng:2e3,goceng:5e3,ceban:1e4,goban:5e4,sejuta:1e6};
+const SLANG_RE=new RegExp('(?:(\\d+)\\s*)?(?<![a-z])('+Object.keys(SLANG).join('|')+')\\b','g');
+// Sebutan uang diubah jadi bentuk "5rb" supaya bisa dibaca aturan nominal yang sama ("2 ceban" jadi "20rb").
+function expandSlang(t){
+  return t.replace(/setengah juta/g,'500rb')
+    .replace(SLANG_RE,(m,n,w)=>String((n?+n:1)*SLANG[w]/1000).replace('.',',')+'rb');
+}
+
+// "hp 1,5jt cicil 10" atau "bagi 10 hari": pengeluaran dibagi rata ke sejumlah hari.
+function parseSplit(text){
+  const m=text.match(/\b(?:cicil|bagi)\s*(\d{1,3})(?:\s*hari)?\b/i);
+  if(!m)return {text,days:1};
+  return {text:(text.slice(0,m.index)+' '+text.slice(m.index+m[0].length)).replace(/\s+/g,' ').trim(),days:Math.max(1,+m[1])};
+}
+
+// Cicilan tidak boleh melewati gajian, supaya seluruhnya terhitung di periode ini.
+function capDays(days,at){
+  const remaining=Math.round((startOf(S.until).getTime()-startOf(at).getTime())/DAY);
+  return Math.min(days,Math.max(1,remaining));
+}
+
+// Harga = angka bersatuan terbesar; kalau tidak ada satuan, angka terbesar. Sisanya nama barang ("indomie 2 bungkus 7rb").
+function parse(text){
+  const t=expandSlang(text.trim().toLowerCase());
+  const income=t.startsWith('+');
+  const mult={rb:1e3,ribu:1e3,k:1e3,jt:1e6,juta:1e6};
+  const tokens=[...t.matchAll(/(\d[\d.,]*)\s*(?:(rb|ribu|k|jt|juta)(?:an)?)?\b/g)]
+    .map(m=>({start:m.index,end:m.index+m[0].length,unit:m[2],value:toNumber(m[1],m[2])*(mult[m[2]]||1)}))
+    .filter(f=>isFinite(f.value)&&f.value>0);
+  // "1jt 200rb" dibaca sebagai satu nominal.
+  const found=[];
+  for(const f of tokens){
+    const p=found[found.length-1];
+    if(p&&mult[p.unit]===1e6&&mult[f.unit]===1e3&&!t.slice(p.end,f.start).trim()){p.end=f.end;p.value+=f.value}
+    else found.push(f);
+  }
+  if(!found.length)return null;
+  const withUnit=found.filter(f=>f.unit);
+  const pick=(withUnit.length?withUnit:found).reduce((a,f)=>f.value>=a.value?f:a);
+  const what=(t.slice(0,pick.start)+' '+t.slice(pick.end))
+    .replace(/^\+\s*/,'').replace(/\brp\.?(?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
+  return {what:what||(income?'pemasukan':'jajan'),amt:Math.round(pick.value),income,small:!pick.unit&&pick.value<1000,ribu:Math.round(pick.value*1000)};
+}
+
+function nextPayday(today,payday){
+  const d=new Date(today);
+  let pd=new Date(d.getFullYear(),d.getMonth(),Math.min(payday,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+  if(pd<=d){const y=d.getFullYear(),m=d.getMonth()+1;pd=new Date(y,m,Math.min(payday,new Date(y,m+1,0).getDate()))}
+  return pd;
+}
+
+const CATS=[
+  ['makan','Makan','nasi|bakso|mie|mi|indomie|soto|ayam|sate|gorengan|martabak|roti|kopi|teh|susu|aqua|air minum|jajan|snack|cemilan|makan|sarapan|lunch|warteg|padang|geprek|seblak|boba|galon'],
+  ['transport','Transport','bensin|pertalite|pertamax|solar|parkir|ojek|ojol|gojek|grab|maxim|tol|kereta|krl|mrt|lrt|transjakarta|busway|bus|angkot|taksi|servis|oli|ban'],
+  ['tagihan','Tagihan','pulsa|listrik|token|pln|pdam|wifi|internet|indihome|paket data|kuota|kos|kost|kontrakan|sewa|cicilan|bpjs|asuransi|iuran'],
+  ['belanja','Belanja','belanja|shopee|tokopedia|lazada|tiktok shop|indomaret|alfamart|sabun|sampo|shampo|odol|deterjen|baju|sepatu|celana|tas|hp|laptop'],
+  ['hiburan','Hiburan','netflix|spotify|youtube|game|nonton|bioskop|karaoke|liburan|tiket'],
+  ['kesehatan','Kesehatan','obat|dokter|apotek|klinik|vitamin|rumah sakit'],
+  ['lainnya','Lainnya',''],
+].map(([id,label,words])=>({id,label,re:words?new RegExp('\\b('+words+')\\b','i'):null}));
+const catLabel=id=>(CATS.find(c=>c.id===id)||CATS[CATS.length-1]).label;
+const autoCategory=what=>(CATS.find(c=>c.re&&c.re.test(what))||CATS[CATS.length-1]).id;
+const categoryOf=e=>CATS.some(c=>c.id===e.cat)?e.cat:autoCategory(e.what);
+
+// Berapa bagian catatan yang sudah terhitung sampai akhir hari dayT. Catatan biasa langsung penuh, cicilan bertahap.
+function chargedBy(e,dayT){
+  if(e.at>=dayT+DAY)return 0;
+  if(!e.days||e.days<2)return e.amt;
+  const n=Math.min(e.days,Math.round((dayT-startOf(e.at).getTime())/DAY)+1);
+  return e.amt*n/e.days;
+}
+const chargedOn=(e,dayT)=>chargedBy(e,dayT)-chargedBy(e,dayT-DAY);
+
+function compute(){
+  const today=startOf(Date.now());
+  const sinceT=startOf(S.since).getTime();
+  const valid=S.entries.filter(e=>e.at>=sinceT);
+  const sum=list=>list.reduce((a,e)=>a+e.amt,0);
+  const spending=valid.filter(e=>!e.income);
+  const t0=today.getTime();
+  const total=(list,fn)=>list.reduce((a,e)=>a+fn(e),0);
+  const todayEntries=valid.filter(e=>e.at>=t0);
+  const spentToday=total(spending,e=>chargedOn(e,t0));
+  const instalments=spending.filter(e=>e.days>1);
+  const cicilToday=total(instalments,e=>chargedOn(e,t0));
+  const cicilNext=total(instalments,e=>chargedOn(e,t0+DAY));
+  const cicilEnd=instalments.reduce((a,e)=>chargedOn(e,t0+DAY)>0?Math.max(a,startOf(e.at).getTime()+(e.days-1)*DAY):a,0);
+  // Pemasukan menambah sisa jatah dan saldo; jatah per hari tetap uang awal / jumlah hari.
+  const income=sum(valid.filter(e=>e.income));
+  // Akhir periode terkunci di S.until, supaya jatah per hari tidak berubah saat gajian tiba.
+  const pd=startOf(S.until);
+  const ended=today>=pd;
+  const daysLeft=Math.max(0,Math.round((pd-today)/DAY));
+  const totalDays=Math.max(1,Math.round((pd-sinceT)/DAY));
+  const perDay=Math.max(0,S.money/totalDays);
+  const dayIdx=Math.min(totalDays-1,Math.max(0,Math.round((today-sinceT)/DAY)));
+  const spentAll=total(spending,e=>chargedBy(e,t0));
+  // Saldo memakai uang yang benar-benar keluar; sisa jatah memakai bagian yang sudah terhitung.
+  const balance=S.money-sum(spending)+income;
+  const left=ended?balance:perDay*(dayIdx+1)-spentAll+income;
+  const leftAt=k=>left+perDay*k-(total(spending,e=>chargedBy(e,t0+k*DAY))-spentAll);
+  const tomorrow=leftAt(1);
+  return {today,sinceT,pd,ended,daysLeft,totalDays,perDay,left,balance,tomorrow,spentToday,spending,cicilToday,cicilNext,cicilEnd,todayEntries,past:S.entries.filter(e=>e.at<today.getTime())};
+}
+
+function render(){
+  const c=compute();
+  document.getElementById('today').textContent=c.today.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('demo').hidden=!S.demo;
+  renderNewForm(c);
+  // Jatah yang tersedia hari ini sudah termasuk sisa atau potongan dari hari-hari sebelumnya.
+  const avail=c.left+c.spentToday;
+  const ratio=avail>0?c.spentToday/avail:(c.perDay>0?1:0);
+  const cls=c.left<0?'bad':c.left<c.perDay*.25?'warn':'';
+  const big=document.getElementById('left');big.textContent=rp(c.left);big.className='big '+cls;
+  document.getElementById('bar').className='bar '+cls;
+  document.getElementById('fill').style.width=Math.min(100,ratio*100)+'%';
+  let v;
+  const tgl=k=>new Date(c.today.getTime()+k*DAY).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'});
+  if(c.ended)v=`Periode ini sudah selesai dengan saldo ${rp(c.balance)}. Masukkan uangmu sekarang untuk mulai periode baru.`;
+  else if(c.left<0){
+    if(c.balance<=0)v=`Lewat ${rp(-c.left)} dari jatah dan saldo ${c.balance<0?`sudah minus ${rp(-c.balance)}`:'sudah habis'}. Tidak ada jatah lagi sampai gajian ${tgl(c.daysLeft)}.`;
+    else if(c.cicilNext>0)v=`Lewat ${rp(-c.left)} dari jatah, dan cicilan ${rp(c.cicilNext)} per hari masih jalan sampai ${new Date(c.cicilEnd).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'})}.`;
+    else{let k=1;while(k<c.daysLeft-1&&c.left+c.perDay*k<1)k++;
+      const rem=c.left+c.perDay*k;
+      const full=rem>=c.perDay-1,resume=full?k:k+1;
+      const next=resume<c.daysLeft?`lalu normal lagi ${rp(c.perDay)} mulai ${tgl(resume)}`:`lalu gajian ${tgl(c.daysLeft)}`;
+      v=k===1?`Lewat ${rp(-c.left)} dari jatah. Besok jatahmu tinggal ${rp(rem)}, ${next}.`
+        :`Lewat ${rp(-c.left)}, itu sama dengan jatah ${Math.ceil(-c.left/c.perDay)} hari. Jatah sampai ${tgl(k-1)} habis buat nutup, ${full?'':`${tgl(k)} tinggal ${rp(rem)}, `}${next}.`}
+  }
+  else if(c.daysLeft===1)v=`Hari terakhir sebelum gajian besok. Sisa jatahmu ${rp(c.left)}.`;
+  else if(c.spentToday===0)v=`Belum jajan hari ini. Sisa jatah ikut terbawa, jadi besok kamu punya ${rp(c.tomorrow)}.`;
+  else if(cls==='warn')v=`Hati-hati, jatah tinggal sedikit. Sudah keluar ${rp(c.spentToday)} hari ini.`;
+  else v=`Aman. Sudah keluar ${rp(c.spentToday)}, sisa jatah masih cukup.`;
+  if(c.cicilToday>0&&!c.ended)v+=` Hari ini termasuk cicilan ${rp(c.cicilToday)}.`;
+  document.getElementById('verdict').textContent=v;
+  document.getElementById('perday').textContent=rp(c.perDay);
+  document.getElementById('balance').textContent=rp(c.balance);
+  document.getElementById('days').textContent=c.ended?'Sudah tiba':c.daysLeft+' hari lagi';
+  list('todayList',c.todayEntries,'Belum ada catatan hari ini.',true);
+  list('pastList',c.past.slice().sort((a,b)=>b.at-a.at).slice(0,30),'Belum ada.',false);
+  renderPeriods();
+  renderInsight(c);
+  renderBills();
+  document.getElementById('backupInfo').textContent='Data hanya tersimpan di browser ini. '+(S.lastBackup?`Backup terakhir ${new Date(S.lastBackup).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}.`:'Belum pernah di-backup.');
+  const freq={};S.entries.filter(e=>!e.income).forEach(e=>{const k=e.what+'|'+e.amt;freq[k]=(freq[k]||0)+1});
+  const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const ch=document.getElementById('chips');ch.innerHTML='';
+  top.forEach(([k])=>{const [w,a]=k.split('|');const b=document.createElement('button');b.type='button';
+    b.textContent=`+ ${w} ${(+a/1000).toLocaleString('id-ID')}rb`;b.onclick=()=>add(w,+a);ch.appendChild(b)});
+  document.getElementById('money').placeholder=(S.money||0).toLocaleString('id-ID');
+  document.getElementById('payday').placeholder=S.payday||25;
+}
+
+function list(id,items,emptyText,showTime){
+  const ul=document.getElementById(id);ul.innerHTML='';
+  if(!items.length){ul.innerHTML=`<li class="empty">${emptyText}</li>`;return}
+  const sinceT=startOf(S.since).getTime();
+  items.slice().sort((a,b)=>b.at-a.at).forEach(e=>{
+    const li=document.createElement('li');const d=new Date(e.at);
+    const when=(showTime?d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}))
+      +(e.income?'':' · '+catLabel(categoryOf(e)))+(e.days>1?` · cicil ${e.days} hari`:'')+(e.at<sinceT?' · periode lalu':'');
+    if(e.id===editingId){ul.appendChild(li);editRow(li,e);return}
+    li.innerHTML=`<div class="what"></div><span class="amt"></span><button class="x ed" type="button" aria-label="Ubah">✎</button><button class="x del" type="button" aria-label="Hapus">×</button>`;
+    li.querySelector('.what').innerHTML=`<div></div><div class="when">${when}</div>`;
+    li.querySelector('.what div').textContent=e.what;
+    const amt=li.querySelector('.amt');amt.textContent=(e.income?'+':'')+rp(e.amt);if(e.income)amt.classList.add('in');
+    li.querySelector('.ed').onclick=()=>{editingId=e.id;render()};
+    li.querySelector('.del').onclick=()=>{
+      S.entries=S.entries.filter(x=>x.id!==e.id);save();render();
+      showToast(`"${e.what}" dihapus.`,()=>{S.entries.push(e);save();render()});
+    };
+    ul.appendChild(li)});
+}
+
+let editingId=null;
+
+// Baris edit memakai format santai yang sama dengan kolom catat.
+function editRow(li,e){
+  const f=document.createElement('form');f.className='edit';
+  f.innerHTML=`<input aria-label="Catatan dan nominal" autocomplete="off"><input type="date" aria-label="Tanggal"><select aria-label="Kategori"></select><div class="err" role="status"></div><div class="edit-btns"><button type="submit">Simpan</button><button class="ghost" type="button">Batal</button></div>`;
+  const [txt,date]=f.querySelectorAll('input'),err=f.querySelector('.err'),cat=f.querySelector('select');
+  const nominal=e.amt%1000===0?(e.amt/1000)+'rb':e.amt.toLocaleString('id-ID');
+  txt.value=`${e.income?'+':''}${e.what} ${nominal}${e.days>1?` cicil ${e.days}`:''}`;
+  date.value=ymd(e.at);date.max=ymd(Date.now());
+  CATS.forEach(c=>cat.add(new Option(c.label,c.id)));
+  const oldCat=categoryOf(e);cat.value=oldCat;cat.hidden=!!e.income;
+  f.querySelector('.ghost').onclick=()=>{editingId=null;render()};
+  f.onsubmit=ev=>{
+    ev.preventDefault();
+    const split=parseSplit(txt.value),r=parse(split.text);
+    if(!r||(r.small&&r.amt!==e.amt)){err.textContent='Nominalnya belum kebaca. Coba tulis seperti "bakso 15rb".';return}
+    if(!date.value||date.value>ymd(Date.now())){err.textContent='Tanggalnya tidak boleh di masa depan.';return}
+    if(date.value!==ymd(e.at)){const [y,m,d]=date.value.split('-').map(Number);e.at=new Date(y,m-1,d,12).getTime()}
+    e.what=r.what;e.amt=r.amt;
+    if(r.income)e.income=true;else delete e.income;
+    const days=r.income?1:capDays(split.days,e.at);
+    if(days>1)e.days=days;else delete e.days;
+    if(cat.value!==oldCat)e.cat=cat.value;
+    editingId=null;save();render();
+  };
+  li.appendChild(f);txt.focus();
+}
+
+const openPeriods=new Set();
+
+function renderPeriods(){
+  const sec=document.getElementById('periodSec'),ul=document.getElementById('periodList');
+  sec.hidden=!S.periods.length;ul.textContent='';
+  const fmt=s=>startOf(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  S.periods.slice().reverse().forEach(p=>{
+    const from=startOf(p.since).getTime(),to=startOf(p.end).getTime();
+    const es=S.entries.filter(e=>e.at>=from&&e.at<to);
+    const spent=es.filter(e=>!e.income).reduce((a,e)=>a+e.amt,0),income=es.filter(e=>e.income).reduce((a,e)=>a+e.amt,0);
+    const li=document.createElement('li');li.className='per';
+    li.innerHTML=`<details><summary><div class="what"><div></div><div class="when"></div></div><span class="amt" title="Sisa di akhir periode"></span><span class="chev" aria-hidden="true">›</span></summary><div class="per-body"></div></details>`;
+    li.querySelector('.what div').textContent=`${fmt(p.since)} – ${fmt(p.end)}`;
+    li.querySelector('.when').textContent=`Awal ${rp(p.money+income)}, terpakai ${rp(spent)}${p.reserved?`, disisihkan ${rp(p.reserved)}`:''}, ${es.length} catatan`;
+    li.querySelector('.amt').textContent=rp(p.money+income-spent);
+    const det=li.querySelector('details'),body=li.querySelector('.per-body');
+    det.ontoggle=()=>{
+      if(!det.open){openPeriods.delete(p.since);body.textContent='';return}
+      openPeriods.add(p.since);
+      // Jatah dihitung dari rencana awal periode, sama seperti saat periode itu berjalan. Arsip lama belum menyimpan rencananya.
+      const planned=Math.max(1,Math.round((startOf(p.until||p.end)-from)/DAY));
+      const n=Math.max(1,Math.round((to-from)/DAY)),count=Math.min(n,62);
+      drawInsight(body,{start:from+(n-count)*DAY,count,perDay:Math.max(0,p.money/planned),spending:es.filter(e=>!e.income),now:to-DAY,peak:true,empty:'Tidak ada pengeluaran di periode ini.'});
+    };
+    det.open=openPeriods.has(p.since);
+    ul.appendChild(li)});
+}
+
+function renderInsight(c){
+  const count=Math.min(c.totalDays,62),start=c.sinceT+(c.totalDays-count)*DAY;
+  drawInsight(document.getElementById('insightNow'),{start,count,perDay:c.perDay,spending:c.spending,now:c.today.getTime(),empty:'Belum ada pengeluaran di periode ini.'});
+}
+
+// Grafik satu seri: batang pengeluaran harian dengan garis jatah. Warna tetap satu, arti dibawa oleh garis dan keterangan.
+function drawInsight(box,{start,count,perDay,spending,now,peak,empty}){
+  box.innerHTML=`<div class="cap"></div><div class="chart"></div><div class="tip" role="status"></div>
+    <details class="plain"><summary>Lihat sebagai tabel</summary><table></table></details><div class="cat-list"></div>`;
+  const fmt=t=>new Date(t).toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'});
+  const days=Array.from({length:count},(_,i)=>{
+    const t=start+i*DAY;return {t,v:spending.reduce((a,e)=>a+chargedOn(e,t),0)}});
+  const todayIdx=Math.max(0,Math.min(count-1,Math.round((now-start)/DAY)));
+  const W=428,H=124,base=H-18,top=6,slot=W/count,bw=Math.max(2,Math.min(slot-2,18));
+  const scale=(base-top)/Math.max(perDay*1.25,...days.map(d=>d.v),1);
+  const lineY=base-perDay*scale;
+  const bars=days.map((d,i)=>{
+    if(d.v<=0)return '';
+    const x=i*slot+(slot-bw)/2,y=base-d.v*scale,r=Math.min(4,bw/2,base-y);
+    return `<path class="b" d="M${x} ${base}V${y+r}Q${x} ${y} ${x+r} ${y}H${x+bw-r}Q${x+bw} ${y} ${x+bw} ${y+r}V${base}Z"/>`}).join('');
+  const hits=days.map((d,i)=>`<rect class="hit" data-i="${i}" x="${i*slot}" y="0" width="${slot}" height="${H}"/>`).join('');
+  const chart=box.querySelector('.chart');
+  chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pengeluaran per hari dibanding jatah ${rp(perDay)}. Rincian ada di tabel.">
+    <rect class="band" y="0" width="${slot}" height="${base}"/>${bars}
+    <line class="base" x1="0" x2="${W}" y1="${base}" y2="${base}"/>
+    <line class="limit" x1="0" x2="${W}" y1="${lineY}" y2="${lineY}"/>
+    <text x="0" y="${H-3}">${new Date(days[0].t).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}</text>
+    <text x="${W}" y="${H-3}" text-anchor="end">${new Date(days[count-1].t).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}</text>${hits}</svg>`;
+  const pick=i=>{
+    const d=days[i];
+    chart.querySelector('.band').setAttribute('x',i*slot);
+    box.querySelector('.tip').textContent=d.t>now?`${fmt(d.t)}: belum sampai`
+      :`${fmt(d.t)}: keluar ${rp(d.v)}${d.v>perDay?`, lewat ${rp(d.v-perDay)} dari jatah harian`:''}`;
+  };
+  chart.onpointerover=chart.onclick=ev=>{const i=ev.target.dataset&&ev.target.dataset.i;if(i!==undefined)pick(+i)};
+  // Periode lalu dibuka di hari paling boros, karena "hari ini" sudah tidak berarti di sana.
+  pick(peak?days.reduce((b,d,i)=>d.v>days[b].v?i:b,0):todayIdx);
+  box.querySelector('.cap').textContent=`Batang: pengeluaran per hari. Garis: jatah ${rp(perDay)}.`;
+  box.querySelector('table').innerHTML='<tr><th>Tanggal</th><th>Keluar</th></tr>'+days.slice(0,todayIdx+1).reverse()
+    .map(d=>`<tr><td>${fmt(d.t)}</td><td>${rp(d.v)}</td></tr>`).join('');
+
+  const totals={};spending.forEach(e=>{const k=categoryOf(e);totals[k]=(totals[k]||0)+e.amt});
+  const all=Object.values(totals).reduce((a,v)=>a+v,0);
+  const rows=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const list=box.querySelector('.cat-list');
+  if(!rows.length){list.innerHTML=`<div class="cap">${empty}</div>`;return}
+  const most=rows[0][1];
+  rows.forEach(([k,v])=>{
+    const row=document.createElement('div');row.className='cat-row';
+    row.innerHTML=`<span>${catLabel(k)}</span><b>${rp(v)}</b><span class="cap">${Math.round(v/all*100)}%</span><div class="cbar"><span style="width:${v/most*100}%"></span></div>`;
+    list.appendChild(row)});
+}
+
+function renderBills(){
+  const ul=document.getElementById('billList');ul.textContent='';
+  const sum=S.bills.reduce((a,b)=>a+b.amt,0);
+  S.bills.forEach(b=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<div class="what"></div><span class="amt"></span><button class="x" type="button" aria-label="Hapus">×</button>`;
+    li.querySelector('.what').textContent=b.what;
+    li.querySelector('.amt').textContent=rp(b.amt);
+    li.querySelector('.x').onclick=()=>{
+      S.bills=S.bills.filter(x=>x.id!==b.id);save();render();
+      showToast(`"${b.what}" dihapus.`,()=>{S.bills.push(b);save();render()});
+    };
+    ul.appendChild(li)});
+  ul.hidden=!S.bills.length;
+  document.getElementById('billInfo').textContent=(sum?`Total ${rp(sum)} per gajian. `:'')+(S.reserved?`Periode ini disisihkan ${rp(S.reserved)}.`:'');
+  document.getElementById('applyWrap').hidden=!sum;
+  document.getElementById('applyText').textContent=`Sisihkan tagihan & tabungan ${rp(sum)} dari uang ini`;
+}
+
+function add(what,amt,at=Date.now(),income=false,days=1){
+  const e={id:Date.now()+Math.random(),what,amt,at};
+  if(income)e.income=true;
+  if(days>1&&!income)e.days=days;
+  S.entries.push(e);save();render();
+  return e;
+}
+
+// Catatan untuk hari lain dan cicilan diberi konfirmasi, karena tanggal atau jumlah harinya bisa saja salah terbaca.
+function record(r,at){
+  const days=r.income?1:capDays(r.days||1,at);
+  const e=add(r.what,r.amt,at,r.income,days);
+  const undo=()=>{S.entries=S.entries.filter(x=>x.id!==e.id);save();render()};
+  if(at<startOf(Date.now()).getTime()){
+    const day=new Date(at).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'});
+    const outside=at<startOf(S.since).getTime();
+    showToast(`Dicatat untuk ${day}${outside?', di luar periode ini jadi tidak dihitung':''}.`,undo);
+  }else if(days>1)showToast(`Dicicil ${days} hari, ${rp(r.amt/days)} per hari.`,undo);
+}
+
+let toastTimer;
+function showToast(msg,undo){
+  const box=document.getElementById('toast'),btn=document.getElementById('toastUndo');
+  document.getElementById('toastMsg').textContent=msg;
+  btn.hidden=!undo;
+  btn.onclick=()=>{box.hidden=true;clearTimeout(toastTimer);undo()};
+  box.hidden=false;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true},7000);
+}
+
+function clearDemo(){if(S.demo){S.entries=S.entries.filter(e=>e.id>5);S.demo=false}}
+
+// Arsip hanya menyimpan batas dan uang awal. Ringkasannya dihitung dari catatan, jadi tetap benar kalau catatan lama diubah.
+function closePeriod(t0){
+  if(S.demo){clearDemo();return}
+  const from=startOf(S.since).getTime();
+  if(from>=t0)return;
+  if(!S.money&&!S.entries.some(e=>e.at>=from&&e.at<t0))return;
+  S.periods.push({since:S.since,until:S.until,end:ymd(t0),money:S.money,reserved:S.reserved||0});
+}
+
+// Uang awal menyertakan pengeluaran hari ini, karena angka yang diisi adalah uang setelah pengeluaran itu.
+function todayNet(t0){return S.entries.filter(e=>e.at>=t0).reduce((a,e)=>a+(e.income?-e.amt:e.amt),0)}
+
+// Gajian lebih awal melanjutkan ke tanggal gajian berikutnya, bukan gajian yang baru saja dimajukan.
+function nextUntil(t0){return nextPayday(Math.max(t0,startOf(S.until).getTime()),S.payday||25)}
+
+let newOpen=false,newDismissed=false;
+
+function readNew(){
+  const amount=s=>{s=s.trim();if(!s||/^0+$/.test(s))return 0;const r=parse(s);return r?r.amt:null};
+  const left=amount(document.getElementById('newLeft').value),pay=amount(document.getElementById('newPay').value);
+  if(left===null||pay===null||(pay>0&&pay<1000)||left+pay<=0)return null;
+  const reserved=[...document.querySelectorAll('#newBills input:checked')].reduce((a,c)=>a+(+c.value),0);
+  const net=left+pay-reserved;
+  return net>0?{total:left+pay,reserved,net}:null;
+}
+
+function updateNewPreview(){
+  const v=readNew(),out=document.getElementById('newPreview');
+  if(v===null){out.textContent='';return}
+  const t0=startOf(Date.now()).getTime(),until=nextUntil(t0);
+  const perDay=(v.net+todayNet(t0))/Math.max(1,Math.round((until-t0)/DAY));
+  out.textContent=`${v.reserved?`Total ${rp(v.total)}, disisihkan ${rp(v.reserved)}, jadi uang awal ${rp(v.net)}`:`Total ${rp(v.total)}`}. Jatah ${rp(perDay)} per hari sampai ${until.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'short'})}.`;
+}
+
+function renderNewForm(c){
+  const form=document.getElementById('newForm'),show=newOpen||(c.ended&&!newDismissed);
+  if(show&&form.hidden){
+    document.getElementById('newLeft').value=Math.max(0,Math.round(c.balance)).toLocaleString('id-ID');
+    document.getElementById('newPay').value='';
+    document.getElementById('newErr').textContent='';
+    const box=document.getElementById('newBills');box.textContent='';
+    S.bills.forEach(b=>{
+      const l=document.createElement('label');l.className='check';
+      l.innerHTML='<input type="checkbox" checked><span></span>';
+      l.querySelector('input').value=b.amt;
+      l.querySelector('span').textContent=`Sisihkan ${b.what} ${rp(b.amt)}`;
+      box.appendChild(l)});
+  }
+  form.hidden=!show;
+  document.getElementById('newTitle').textContent=c.ended?'Gajian sudah tiba':'Mulai periode baru';
+  if(show)updateNewPreview();
+}
+
+function hideAsk(){const box=document.getElementById('ask');box.hidden=true;box.textContent=''}
+
+// Nominal di bawah 1.000 tanpa satuan biasanya berarti ribuan, jadi tanya dulu sebelum dicatat.
+function askAmount(r,at){
+  const box=document.getElementById('ask'),inp=document.getElementById('entry');
+  box.textContent='';box.hidden=false;
+  const q=document.createElement('span');q.className='ask-q';q.textContent=`Maksud "${r.what}" berapa?`;box.appendChild(q);
+  [r.ribu,r.amt].forEach(amt=>{
+    const b=document.createElement('button');b.type='button';b.textContent=rp(amt);
+    b.onclick=()=>{hideAsk();record({...r,amt},at);inp.value='';inp.focus()};box.appendChild(b)});
+  box.querySelector('button').focus();
+}
+
+function openSettings(){document.getElementById('settings').open=true;document.getElementById('money').focus()}
+
+document.getElementById('addForm').addEventListener('submit',ev=>{
+  ev.preventDefault();const inp=document.getElementById('entry');const err=document.getElementById('err');
+  hideAsk();
+  const when=parseWhen(inp.value);
+  const split=parseSplit(when.text);
+  const r=parse(split.text);
+  if(!r){err.textContent='Nominalnya belum kebaca. Coba tulis seperti "bakso 15rb".';return}
+  err.textContent='';
+  r.days=split.days;
+  if(r.small){askAmount(r,when.at);return}
+  record(r,when.at);inp.value='';inp.focus();
+});
+document.getElementById('entry').addEventListener('input',hideAsk);
+document.getElementById('setForm').addEventListener('submit',ev=>{
+  ev.preventDefault();
+  const m=document.getElementById('money').value,p=parseInt(document.getElementById('payday').value,10);
+  const setErr=document.getElementById('setErr');setErr.textContent='';
+  const r=m.trim()?parse(m):null;
+  if(m.trim()&&(!r||r.small)){setErr.textContent='Jumlah uangnya belum kebaca. Coba tulis seperti "1.500.000" atau "1,5jt".';return}
+  const billSum=S.bills.reduce((a,b)=>a+b.amt,0);
+  const reserved=document.getElementById('applyBills').checked?billSum:0;
+  if(r&&r.amt<=reserved){setErr.textContent='Tagihan dan tabungan lebih besar dari uangnya.';return}
+  document.getElementById('applyBills').checked=false;
+  const t0=startOf(Date.now()).getTime();
+  const ended=t0>=startOf(S.until).getTime();
+  const oldPayday=S.payday;
+  // Catatan contoh dibuang, catatan milik pengguna tetap tersimpan.
+  if(r)closePeriod(t0);else clearDemo();
+  if(p>=1&&p<=31)S.payday=p;
+  if(r){
+    S.money=r.amt-reserved+todayNet(t0);S.reserved=reserved;
+    S.since=ymd(t0);S.until=ymd(nextPayday(t0,S.payday));
+  }else if(S.payday!==oldPayday&&!ended)S.until=ymd(nextPayday(t0,S.payday));
+  document.getElementById('money').value='';document.getElementById('payday').value='';
+  document.getElementById('settings').open=false;save();render();
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  const t0=startOf(Date.now()).getTime();
+  S={demo:false,money:0,since:ymd(t0),until:ymd(nextPayday(t0,25)),payday:25,periods:[],bills:S.bills,entries:[]};save();render();
+  openSettings();
+});
+document.getElementById('earlyNew').addEventListener('click',()=>{
+  newOpen=true;newDismissed=false;
+  document.getElementById('settings').open=false;render();
+  document.getElementById('newPay').focus();
+});
+document.getElementById('newCancel').addEventListener('click',()=>{newOpen=false;newDismissed=true;render()});
+['input','change'].forEach(t=>document.getElementById('newForm').addEventListener(t,updateNewPreview));
+document.getElementById('newForm').addEventListener('submit',ev=>{
+  ev.preventDefault();
+  const v=readNew(),err=document.getElementById('newErr');
+  if(v===null){err.textContent='Jumlahnya belum kebaca, atau tagihan lebih besar dari uangnya.';return}
+  const t0=startOf(Date.now()).getTime(),until=nextUntil(t0);
+  closePeriod(t0);
+  S.money=v.net+todayNet(t0);S.since=ymd(t0);S.until=ymd(until);S.reserved=v.reserved;
+  newOpen=false;newDismissed=false;err.textContent='';
+  save();render();
+});
+document.getElementById('billForm').addEventListener('submit',ev=>{
+  ev.preventDefault();
+  const inp=document.getElementById('billEntry'),err=document.getElementById('billErr');
+  const r=parse(inp.value);
+  if(!r||r.small||r.income){err.textContent='Coba tulis seperti "kos 800rb" atau "tabungan 500rb".';return}
+  err.textContent='';S.bills.push({id:Date.now()+Math.random(),what:r.what,amt:r.amt});
+  inp.value='';save();render();inp.focus();
+});
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  S.lastBackup=Date.now();save();render();
+  const url=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download=`jatah-harian-${ymd(Date.now())}.json`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',async ev=>{
+  const input=ev.target,file=input.files[0],err=document.getElementById('backupErr');
+  input.value='';err.textContent='';
+  if(!file)return;
+  let data=null;
+  try{data=JSON.parse(await file.text())}catch(e){}
+  if(!isValidBackup(data)){err.textContent='File ini bukan backup Jatah Harian yang valid. Data sekarang tidak berubah.';return}
+  if(!confirm(`Ganti data sekarang dengan backup ini (${data.entries.length} catatan)?`))return;
+  const prev=S;
+  S=normalize(data);editingId=null;newOpen=false;newDismissed=false;save();render();
+  showToast('Data dipulihkan.',()=>{S=prev;save();render()});
+});
+
+// Aplikasi yang dibiarkan terbuka tetap mengikuti tanggal hari ini.
+let shownDay=ymd(Date.now());
+function refreshDay(){const d=ymd(Date.now());if(d!==shownDay){shownDay=d;render()}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDay()});
+setInterval(refreshDay,60000);
+
+// Mode offline hanya jalan kalau aplikasi dibuka dari alamat web, bukan dari file langsung.
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'))
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+render();
+</script>

@@ -3,7 +3,7 @@
   "short_name": "Jatah Harian",
   "description": "Pencatat jatah uang harian sampai gajian.",
   "lang": "id",
-  "start_url": "./jatah-harian.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef2ee",
